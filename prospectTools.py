@@ -251,6 +251,18 @@ class postProspect(object):
         returns = self.percentMspec(self.MspecsT, self.p_all, self.res['weights'])
         self.siglo, self.med, self.sighi = returns.T
 
+
+        self.percentMphot = lambda mphotT, p_all, weights: np.array([dynesty.plotting._quantile(i, p_all, weights=weights)
+                                                                 for i in mphotT])
+
+        self.MphotT = np.array(self.AllModelPull['mphot']).T
+        returns = self.percentMphot(self.MphotT, self.p_all, self.res['weights'])
+
+        self.mphot_siglo, self.mphot_med, self.mphot_sighi = returns.T
+        self.mphot_siglo_err = np.abs(self.mphot_med - self.mphot_siglo)
+        self.mphot_sighi_err = np.abs(self.mphot_med - self.mphot_sighi)
+
+
     def plotSFR(self, figax=None, saveplots=True, plotRecent=True,
                 fs = 21, fs2 = 17, fs3 = 12,
                 c1 = 'lightgrey', c2 = 'darkgrey',
@@ -382,7 +394,7 @@ class postProspect(object):
                     markeredgecolor='black', markerfacecolor='none',
                     zorder=3)
         ax.scatter(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, c=obscolors,  alpha=.7,
-                   marker='o', facecolor='none', label='Observed photometry',
+                   marker='o', facecolor='none', label='Observed Photometry',
                    zorder=3)
 
         # ax.errorbar(self.wphot, self.obs['maggies'], yerr=self.obs['maggies_unc'],
@@ -403,6 +415,11 @@ class postProspect(object):
         # ax.plot(self.wspec*self.wavelength_unitconv, sighi*self.flux_unitconv, lw=0.7, c='lightgrey')
         ax.fill_between(self.wspec*self.wavelength_unitconv, self.siglo*self.flux_unitconv, self.sighi*self.flux_unitconv,
                         label='$\pm1\sigma$ Model', lw=0.7, color='lightgrey', alpha=.5, zorder=-1)
+
+        asymmetric_error = np.array([self.mphot_siglo_err, self.mphot_sighi_err])
+        ax.errorbar(self.wphot*self.wavelength_unitconv, self.mphot_med*self.flux_unitconv,
+                    yerr=asymmetric_error*self.flux_unitconv,
+                    c='slategrey', ecolor='slategrey', fmt='s', alpha=.7, label='Model Photometry')
 
         ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
 
@@ -505,6 +522,206 @@ class postProspect(object):
             ins.minorticks_on()
 
             returns = [fig, ax, ins_height]
+
+        if saveplots:
+            plt.savefig(os.path.join(self.plots_dir,self.objstr+"_modelspec_phot_newshape_zoom.pdf"))
+
+        return returns
+
+
+
+
+
+    def plotSED_witherr(self, figax = None, saveplots=True, savedir='./', plot_SFR=True,
+                        fs = 21, fs2 = 17, fs3 = 12, fs_ticks = 12, figsize=(10,7),
+                        colors = ['#DAA51B', '#38A6A5', '#2F8AC4', '#5F4690'],
+                        ax_space = (0, .1, 1, 1),
+                        ax2_space = (.7, .25, .35, .35),
+                        ax3_space = (0, 0, 1, .1),
+                        time_units=1e-9, c1='lightgrey', c2='darkgrey'):
+
+        self.wphot = self.obs['wave_effective'].copy()
+
+        self.a = 1.0 + self.model.params.get('zred', 0.0) # cosmological redshifting
+        self.wspec = self.sps.wavelengths.copy()
+        self.wspec *= self.a
+
+        self.wavelength_unitconv = 0.0001 # anstroms to micrometers
+        self.flux_unitconv = 3631e-23 # maggies to erg/s/cm^2
+
+        # If including SFR subplot:
+        if plot_SFR:
+            if figax is None:
+                fig = plt.figure(figsize=figsize)
+                ax=fig.add_axes(ax_space)
+                ax2_space = np.array(ax2_space)
+                ax2_space[2] = ax2_space[2]*figsize[1]/figsize[0]
+                ax2=fig.add_axes(tuple(ax2_space))
+                ax3=fig.add_axes(ax3_space)
+            else:
+                fig, [ax,ax2,ax3] = figax
+        # If not including SFR subplot
+        else:
+            if figax is None:
+                fig = plt.figure(figsize=figsize)
+                ax=fig.add_axes(ax_space)
+                ax3=fig.add_axes(ax3_space)
+            else:
+                fig, [ax,ax3] = figax
+
+        color_model = colors[2]
+
+        ax.tick_params(which='major', direction='in', labelsize=fs_ticks)
+        ax.tick_params(which='minor', direction='in', labelsize=fs_ticks)
+        ax.tick_params(top=True, bottom=True, left=True, right=True, which='both')
+        ax.minorticks_on()
+        ax.get_xaxis().set_visible(False)
+
+        ax.plot(self.wphot*self.wavelength_unitconv, self.mphot_map*self.flux_unitconv, alpha=0)
+
+        self.n_obs = len(self.obs['filters'])
+        obscolors = cm.rainbow_r(np.linspace(0,1,self.n_obs))
+        # obscolors = cm.Set3(np.linspace(0,1,self.n_obs))
+
+        ax.errorbar(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, yerr=self.obs['maggies_unc']*self.flux_unitconv,
+                    ls='',  c='white',
+                    markeredgecolor='black', markerfacecolor='none',
+                    zorder=3)
+        ax.scatter(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, c='white',
+                   marker='o', facecolor='none',
+                   zorder=3)
+        ax.errorbar(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, yerr=self.obs['maggies_unc']*self.flux_unitconv,
+                    ls='', color=obscolors, alpha=.7,
+                    markeredgecolor='black', markerfacecolor='none',
+                    zorder=3)
+        ax.scatter(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, c=obscolors,  alpha=.7,
+                   marker='o', facecolor='none', label='Observed Photometry',
+                   zorder=3)
+
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+
+        asymmetric_error = np.array([self.mphot_siglo_err, self.mphot_sighi_err])
+        ax.errorbar(self.wphot*self.wavelength_unitconv, self.mphot_med*self.flux_unitconv,
+                    yerr=asymmetric_error*self.flux_unitconv,
+                    c='slategrey', ecolor='slategrey', fmt='s', alpha=.7, label='Model Photometry')
+
+        ax.plot(self.wspec*self.wavelength_unitconv, self.med*self.flux_unitconv, lw=0.7, c='darkgrey', zorder=1)
+        ax.fill_between(self.wspec*self.wavelength_unitconv, self.siglo*self.flux_unitconv, self.sighi*self.flux_unitconv,
+                        label='$\pm1\sigma$ Model', lw=0.7, color='lightgrey', alpha=.5, zorder=-1)
+
+        ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
+
+        dy_filterspace = 10**-1.2*ymax-ymin
+        ax.set_ylim(ymin-dy_filterspace, ymax)
+
+        # Plotting filter curves on twin axis
+        axtwin = ax.twinx()
+
+        obs_all = []
+        # plot transmission curves
+        for f,c in zip(self.obs['filters'],obscolors):
+            w, t = f.wavelength.copy(), f.transmission.copy()
+            t *= 1/t.max()
+            t *=.06
+            axtwin.plot(w*self.wavelength_unitconv, t, lw=1, color=c, alpha=.65)
+            obs_all.append(c)
+
+        axtwin.set_ylim(0,1)
+        axtwin.axes.get_yaxis().set_visible(False)
+
+        ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
+        axtwin.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
+
+        ax.set_xlabel(r'Wavelength $\rm (\mu m)$', fontsize=fs)
+        ax.set_ylabel(r'Flux Density $\rm (erg \,\, s^{-1} \,\, cm^{-2} \,\, Hz^{-1})$', fontsize=fs)
+        ax.legend(loc=2, fontsize=fs3, frameon=True)
+
+        ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+
+        ax.tick_params(which='major', direction='in', labelsize=fs_ticks)
+        ax.tick_params(which='minor', direction='in', labelsize=fs_ticks)
+        ax.tick_params(top=True, bottom=True, left=True, right=True, which='both')
+        ax.minorticks_on()
+
+        # MAGNITUDE DIFFERENCE LOWER PLOT
+        ax3.tick_params(which='major', direction='in', labelsize=fs_ticks)
+        ax3.tick_params(which='minor', direction='in', labelsize=fs_ticks)
+        ax3.tick_params(top=True, bottom=True, left=True, right=True, which='both')
+        ax3.minorticks_on()
+
+        # ax3.axhline(y=0, color='k', linestyle='--')
+
+        diff_obs_mod = self.obs['maggies']*self.flux_unitconv - self.mphot_med*self.flux_unitconv
+        yerr_obs = self.obs['maggies_unc']*self.flux_unitconv
+        yerr_mod = np.abs(self.mphot_siglo - self.mphot_sighi)
+        diff_obs_mod_err = np.sqrt(yerr_obs**2 + yerr_mod**2)
+
+        ax3.plot(self.wphot*self.wavelength_unitconv, diff_obs_mod,
+                 marker='o', alpha=0, linewidth=0)
+        ax3.scatter(self.wphot*self.wavelength_unitconv, diff_obs_mod,
+                    c=obscolors, alpha=.7, marker='o', facecolor='none',
+                    zorder=3)
+
+        ax3_ylims = ax3.get_ylim()
+        limit = max(np.abs(ax3_ylims))*1.3
+        ax3.set_ylim(-limit,limit)
+
+        ax3.set_xlim(self.xmin_filters*self.wavelength_unitconv,
+                     self.xmax_filters*self.wavelength_unitconv)
+
+        ax3.axhline(y=0, color='k', linestyle='--', alpha=0.2)
+
+        ax3.set_xlabel(r'Wavelength $\rm (\mu m)$', fontsize=fs)
+        ax3.set_ylabel(r'$\Delta$', fontsize=fs);
+
+        returns = [fig, ax, ax3]
+
+        if plot_SFR:
+
+            c1 = 'lightgrey'
+            c2 = 'darkgrey'
+
+            ax2.tick_params(which='major', direction='in', labelsize=fs_ticks)
+            ax2.tick_params(which='minor', direction='in', labelsize=fs_ticks)
+            ax2.tick_params(top=True, bottom=True, left=True, right=True, which='both')
+            ax2.minorticks_on()
+
+            dt_last = None
+            for timestart, timeend, mass in zip(self.agebins[:,0],self.agebins[:,1],self.percentMasses):
+
+                dt_ = 10**timeend - 10**timestart
+
+                if dt_last != None:
+                    ax2.loglog(time_units*10**np.array([timestart, timestart]), [mass_last[1]/dt_last, mass[1]/dt_],
+                               lw=0.7, c=c2)
+                ax2.loglog(time_units*10**np.array([timestart,timeend]), [mass[1],mass[1]]/dt_, lw=0.7, c=c2)
+                ax2.fill_between(time_units*10**np.array([timestart,timeend]), [mass[0],mass[0]]/dt_, [mass[2],mass[2]]/dt_,
+                                 lw=0.7, color=c1, alpha=.5)
+
+                mass_last = mass
+                dt_last = dt_
+
+            ax2.loglog()
+            ax2.set_xlabel(r't $\rm ( Gyr )$', fontsize=fs2)
+            ax2.set_ylabel(r'$\rm SFR_{model}$ $\rm (M_\odot \,\, yr^{-1})$   ', fontsize=fs2);
+            ax2.set_xlim(time_units*10**7,time_units*10**self.t_uni)
+
+            color_recent = colors[1]
+
+            ax2.plot(np.linspace(0,time_units*10**8,100),[self.LocalSFRmed]*100, color=color_recent, lw=1,
+                     label='Last 100 Myr')
+            ax2.fill_between(np.linspace(0,time_units*10**8,100), [self.LocalSFRlo]*100, [self.LocalSFRhi]*100,
+                             color=color_recent, alpha=.1)
+
+            ax2.legend(loc=4, fontsize=fs3, frameon=True)
+            ax2.invert_xaxis()
+            ax2.tick_params(which='major', direction='in', labelsize=fs3)
+            ax2.tick_params(which='minor', direction='in', labelsize=fs3)
+            ax2.tick_params(top=True, bottom=True, left=True, right=True, which='both')
+            ax2.minorticks_on()
+
+            returns = [fig, ax, ax2, ax3]
 
         if saveplots:
             plt.savefig(os.path.join(self.plots_dir,self.objstr+"_modelspec_phot_newshape_zoom.pdf"))
