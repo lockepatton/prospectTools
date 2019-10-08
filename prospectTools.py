@@ -238,7 +238,7 @@ class postProspect(object):
             self.AllModelPull['nebline_lum_halpha'].append(nebline_lum[halpha_line_i])
 
         if save:
-            np.save(os.path.join(self.out_dir, self.objstr+'.npy'), self.AllModelPull)
+            np.savez_compressed(os.path.join(self.out_dir, self.objstr+'.npy'), self.AllModelPull)
 
     def loadPostProcess(self):
         self.AllModelPull = np.load(os.path.join(self.out_dir, self.objstr+'.npy')).item()
@@ -423,8 +423,11 @@ class postProspect(object):
 
         ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
 
-        dy_filterspace = 10**-1.2*ymax-ymin
-        ax.set_ylim(ymin-dy_filterspace, ymax)
+        if figax != None:
+            dy_filterspace = 10**-1.2*ymax-ymin
+            ax.set_ylim(ymin-dy_filterspace, ymax)
+        else:
+            ax.set_ylim(ymin, ymax)
 
 
         # print(len(obscolors))
@@ -583,6 +586,12 @@ class postProspect(object):
         obscolors = cm.rainbow_r(np.linspace(0,1,self.n_obs))
         # obscolors = cm.Set3(np.linspace(0,1,self.n_obs))
 
+
+        if figax !=None:
+            label='Observed Photometry'
+        else:
+            label=''
+
         ax.errorbar(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, yerr=self.obs['maggies_unc']*self.flux_unitconv,
                     ls='',  c='white',
                     markeredgecolor='black', markerfacecolor='none',
@@ -595,20 +604,31 @@ class postProspect(object):
                     markeredgecolor='black', markerfacecolor='none',
                     zorder=3)
         ax.scatter(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, c=obscolors,  alpha=.7,
-                   marker='o', facecolor='none', label='Observed Photometry',
+                   marker='o', facecolor='none', label=label,
                    zorder=3)
 
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
 
+
+        if figax !=None:
+            label='Model Photometry'
+        else:
+            label=''
+
         asymmetric_error = np.array([self.mphot_siglo_err, self.mphot_sighi_err])
         ax.errorbar(self.wphot*self.wavelength_unitconv, self.mphot_med*self.flux_unitconv,
                     yerr=asymmetric_error*self.flux_unitconv,
-                    c='slategrey', ecolor='slategrey', fmt='s', alpha=.7, label='Model Photometry')
+                    c='slategrey', ecolor='slategrey', fmt='s', alpha=.7, label=label)
+
+        if figax !=None:
+            label='$\pm1\sigma$ Model'
+        else:
+            label=''
 
         ax.plot(self.wspec*self.wavelength_unitconv, self.med*self.flux_unitconv, lw=0.7, c='darkgrey', zorder=1)
         ax.fill_between(self.wspec*self.wavelength_unitconv, self.siglo*self.flux_unitconv, self.sighi*self.flux_unitconv,
-                        label='$\pm1\sigma$ Model', lw=0.7, color='lightgrey', alpha=.5, zorder=-1)
+                        label=label, lw=0.7, color='lightgrey', alpha=.5, zorder=-1)
 
         ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
 
@@ -709,8 +729,13 @@ class postProspect(object):
 
             color_recent = colors[1]
 
+            if figax != None:
+                label='Last 100 Myr'
+            else:
+                label=''
+
             ax2.plot(np.linspace(0,time_units*10**8,100),[self.LocalSFRmed]*100, color=color_recent, lw=1,
-                     label='Last 100 Myr')
+                     label=label)
             ax2.fill_between(np.linspace(0,time_units*10**8,100), [self.LocalSFRlo]*100, [self.LocalSFRhi]*100,
                              color=color_recent, alpha=.1)
 
