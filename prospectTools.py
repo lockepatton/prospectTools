@@ -64,6 +64,9 @@ class postProspect(object):
         # loading sps
         self.sps = load_sps()
 
+        self.wavelength_unitconv = 0.0001 # anstroms to micrometers
+        self.flux_unitconv = 3631e-23 # maggies to erg/s/cm^2
+
         if verbose:
             print('Object Built')
 
@@ -240,10 +243,13 @@ class postProspect(object):
         if save:
             np.savez_compressed(os.path.join(self.out_dir, self.objstr+'.npy'), self.AllModelPull)
 
-    def loadPostProcess(self):
-        self.AllModelPull = np.load(os.path.join(self.out_dir, self.objstr+'.npy')).item()
+    def loadPostProcess(self, outputstr='.npy'):
+        self.AllModelPull = np.load(os.path.join(self.out_dir, self.objstr+outputstr)).item()
 
     def postPostProcess(self):
+        # Test Adding (See if this means I don't have to run postProcessInit)
+        self.theta = self.model.theta.copy()
+
         self.percentMspec = lambda mspecT, p_all, weights : np.array([dynesty.plotting._quantile(i, p_all, weights=weights)
                                                          for i in mspecT])
 
@@ -334,6 +340,10 @@ class postProspect(object):
             t = 0.01*(ymax-ymin)*t + ymin
             ax.semilogx(w, t, lw=1.2, color=c, alpha=0.7)
 
+            filtername = ' '.join(f.name.split('_'))
+            ax.text(f.wave_effective, min(t), filtername,
+                     rotation=90, color=c, horizontalalignment="left", verticalalignment="bottom")
+
 
         self.xmin_filters, self.xmax_filters = ax.get_xlim()
 
@@ -369,7 +379,9 @@ class postProspect(object):
         #             markerfacecolor='none', markeredgecolor=color_model,
         #             markeredgewidth=3)
 
-        ax.plot(self.wphot*self.wavelength_unitconv, self.mphot_map*self.flux_unitconv, alpha=0)
+        # REMOVED THIS ONE
+        # ax.plot(self.wphot*self.wavelength_unitconv, self.mphot_map*self.flux_unitconv, alpha=0)
+
         # ax.scatter(self.wphot*self.wavelength_unitconv, self.mphot_map*self.flux_unitconv, c=color_model, marker='s',
         #            facecolor='none',label='Model photometry | max probability',
         #            zorder=2)
@@ -377,7 +389,7 @@ class postProspect(object):
         # print(xmin, xmax)
 
         self.n_obs = len(self.obs['filters'])
-        obscolors = cm.rainbow_r(np.linspace(0,1,self.n_obs))
+        self.obscolors = cm.rainbow_r(np.linspace(0,1,self.n_obs))
         # obscolors = cm.Set3(np.linspace(0,1,self.n_obs))
 
         # obscolors = 'blue'
@@ -390,15 +402,15 @@ class postProspect(object):
                    marker='o', facecolor='none',
                    zorder=3)
         ax.errorbar(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, yerr=self.obs['maggies_unc']*self.flux_unitconv,
-                    ls='', color=obscolors, alpha=.7,
+                    ls='', color=self.obscolors, alpha=.7,
                     markeredgecolor='black', markerfacecolor='none',
                     zorder=3)
-        ax.scatter(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, c=obscolors,  alpha=.7,
+        ax.scatter(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, c=self.obscolors,  alpha=.7,
                    marker='o', facecolor='none', label='Observed Photometry',
                    zorder=3)
 
         # ax.errorbar(self.wphot, self.obs['maggies'], yerr=self.obs['maggies_unc'],
-        #             label='Observed photometry', ecolor=obscolors,
+        #             label='Observed photometry', ecolor=self.obscolors,
         #             marker='o', markersize=8, ls='', lw=3, alpha=0.8,
         #             markerfacecolor='none', markeredgecolor='red',
         #             markeredgewidth=3)
@@ -439,7 +451,7 @@ class postProspect(object):
 
         obs_all = []
         # plot transmission curves
-        for f,c in zip(self.obs['filters'],obscolors):
+        for f,c in zip(self.obs['filters'],self.obscolors):
         # for i,f in enumerate(self.obs['filters']):
         #     i = i % 3
         #     c = colors_short[i]
@@ -533,9 +545,8 @@ class postProspect(object):
 
 
 
-
-
-    def plotSED_witherr(self, figax = None, saveplots=True, savedir='./', plot_SFR=True,
+    def plotSED_witherr(self, figax = None, saveplots=True, savedir='./',
+                        plot_SFR=True, plotFilterNames=True,
                         fs = 21, fs2 = 17, fs3 = 12, fs_ticks = 12, figsize=(10,7),
                         colors = ['#DAA51B', '#38A6A5', '#2F8AC4', '#5F4690'],
                         ax_space = (0, .1, 1, 1),
@@ -548,9 +559,6 @@ class postProspect(object):
         self.a = 1.0 + self.model.params.get('zred', 0.0) # cosmological redshifting
         self.wspec = self.sps.wavelengths.copy()
         self.wspec *= self.a
-
-        self.wavelength_unitconv = 0.0001 # anstroms to micrometers
-        self.flux_unitconv = 3631e-23 # maggies to erg/s/cm^2
 
         # If including SFR subplot:
         if plot_SFR:
@@ -580,11 +588,12 @@ class postProspect(object):
         ax.minorticks_on()
         ax.get_xaxis().set_visible(False)
 
-        ax.plot(self.wphot*self.wavelength_unitconv, self.mphot_map*self.flux_unitconv, alpha=0)
+        # REMOVED THIS ONE
+        # ax.plot(self.wphot*self.wavelength_unitconv, self.mphot_map*self.flux_unitconv, alpha=0)
 
         self.n_obs = len(self.obs['filters'])
-        obscolors = cm.rainbow_r(np.linspace(0,1,self.n_obs))
-        # obscolors = cm.Set3(np.linspace(0,1,self.n_obs))
+        self.obscolors = cm.rainbow_r(np.linspace(0,1,self.n_obs))
+        # self.obscolors = cm.Set3(np.linspace(0,1,self.n_obs))
 
 
         if figax !=None:
@@ -600,10 +609,10 @@ class postProspect(object):
                    marker='o', facecolor='none',
                    zorder=3)
         ax.errorbar(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, yerr=self.obs['maggies_unc']*self.flux_unitconv,
-                    ls='', color=obscolors, alpha=.7,
+                    ls='', color=self.obscolors, alpha=.7,
                     markeredgecolor='black', markerfacecolor='none',
                     zorder=3)
-        ax.scatter(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, c=obscolors,  alpha=.7,
+        ax.scatter(self.wphot*self.wavelength_unitconv, self.obs['maggies']*self.flux_unitconv, c=self.obscolors,  alpha=.7,
                    marker='o', facecolor='none', label=label,
                    zorder=3)
 
@@ -626,9 +635,9 @@ class postProspect(object):
         else:
             label=''
 
-        ax.plot(self.wspec*self.wavelength_unitconv, self.med*self.flux_unitconv, lw=0.7, c='darkgrey', zorder=1)
+        ax.plot(self.wspec*self.wavelength_unitconv, self.med*self.flux_unitconv, lw=0.7, c=c2, zorder=1)
         ax.fill_between(self.wspec*self.wavelength_unitconv, self.siglo*self.flux_unitconv, self.sighi*self.flux_unitconv,
-                        label=label, lw=0.7, color='lightgrey', alpha=.5, zorder=-1)
+                        label=label, lw=0.7, color=c1, alpha=.5, zorder=-1)
 
         ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
 
@@ -640,11 +649,18 @@ class postProspect(object):
 
         obs_all = []
         # plot transmission curves
-        for f,c in zip(self.obs['filters'],obscolors):
+        for f,c in zip(self.obs['filters'],self.obscolors):
             w, t = f.wavelength.copy(), f.transmission.copy()
             t *= 1/t.max()
             t *=.06
             axtwin.plot(w*self.wavelength_unitconv, t, lw=1, color=c, alpha=.65)
+
+
+            filtername = ' '.join(f.name.split('_'))
+            if plotFilterNames:
+                axtwin.text(f.wave_effective*self.wavelength_unitconv, max(t), filtername,
+                            rotation=90, color=c, horizontalalignment="left", verticalalignment="bottom")
+
             obs_all.append(c)
 
         axtwin.set_ylim(0,1)
@@ -680,7 +696,7 @@ class postProspect(object):
         ax3.plot(self.wphot*self.wavelength_unitconv, diff_obs_mod,
                  marker='o', alpha=0, linewidth=0)
         ax3.scatter(self.wphot*self.wavelength_unitconv, diff_obs_mod,
-                    c=obscolors, alpha=.7, marker='o', facecolor='none',
+                    c=self.obscolors, alpha=.7, marker='o', facecolor='none',
                     zorder=3)
 
         ax3_ylims = ax3.get_ylim()
@@ -698,9 +714,6 @@ class postProspect(object):
         returns = [fig, ax, ax3]
 
         if plot_SFR:
-
-            c1 = 'lightgrey'
-            c2 = 'darkgrey'
 
             ax2.tick_params(which='major', direction='in', labelsize=fs_ticks)
             ax2.tick_params(which='minor', direction='in', labelsize=fs_ticks)
