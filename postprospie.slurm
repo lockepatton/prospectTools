@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #SBATCH -p shared	 				# Partition to submit to (comma separated)
-#SBATCH -J prospyall					# Job name
+#SBATCH -J postprospyall					# Job name
 #SBATCH -n 1						# Number of cores
 #SBATCH -N 1						# Ensure that all cores are on one machine
 #SBATCH -t 0-4:00					# Runtime in D-HH:MM (or use minutes)
@@ -22,3 +22,4 @@ echo Starting postcreatefast.py ...
 echo $SLURM_ARRAY_TASK_ID
 
 python ./prospectTools/postcreatefast.py $SLURM_ARRAY_TASK_ID
+echo Finished.
