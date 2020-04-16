@@ -250,10 +250,10 @@ class postProspect(object):
             np.savez_compressed(os.path.join(self.out_dir, self.objstr), AllModelPull_NoSpec)
 
     def loadPostProcess(self, outputstr='.npz'):
-        AllModelPull_Loaded = np.load(os.path.join(self.out_dir, self.objstr+outputstr))
+        AllModelPull_Loaded = np.load(os.path.join(self.out_dir, self.objstr+outputstr), allow_pickle = True)
         self.AllModelPull = AllModelPull_Loaded['arr_0'].item()
 
-        mspec_Loaded = np.load(os.path.join(self.out_dir, self.objstr+'-mspec'+outputstr))
+        mspec_Loaded = np.load(os.path.join(self.out_dir, self.objstr+'-mspec'+outputstr), allow_pickle = True)
         self.AllModelPull['mspec'] = mspec_Loaded['arr_0']
 
     def postPostProcess(self):
