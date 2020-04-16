@@ -62,8 +62,11 @@ Prospie.confirmPrint()
 Prospie.postProcessSfrMass()
 
 Prospie.postProcessInit()
-Prospie.postProcessComplete(save=True)
-print('Post Process Complete ran.')
+#Prospie.postProcessComplete(save=True)
+
+print('Loading post process')
+Prospie.loadPostProcess()
+print('Loaded post-process')
 
 Prospie.postPostProcess()
 Prospie.plotFilters()
@@ -73,7 +76,3 @@ Prospie.plotTrace(saveplots=True)
 Prospie.plotCorner(saveplots=True)
 Prospie.plotSED_witherr_nuFnu(saveplots=True, plotnuFnu=False)
 Prospie.plotSED_witherr_nuFnu(saveplots=True, plotnuFnu=True)
-
-print('Loading post process as a test.')
-Prospie.loadPostProcess()
-print('Loaded post-process.')
