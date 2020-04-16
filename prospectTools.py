@@ -11,6 +11,7 @@ import dynesty.plotting
 import json
 
 from astropy import constants as const
+from astropy import units as u
 from scipy import stats
 from sedpy import observate
 # from mpl_toolkits.axes_grid.inset_locator import inset_axes
@@ -65,7 +66,9 @@ class postProspect(object):
         self.sps = load_sps()
 
         self.wavelength_unitconv = 0.0001 # anstroms to micrometers
-        self.flux_unitconv = 3631e-23 # maggies to erg/s/cm^2
+        self.flux_unitconv = 3631e-23 # maggies to erg/s/cm^2/Hz
+        #1 maggie is the flux density in Janskys divided by 3631
+        # u.maggie = (u.Jy/3631).to(u.erg/u.s/u.cm**2/u.Hz).value
 
         if verbose:
             print('Object Built')
@@ -348,7 +351,7 @@ class postProspect(object):
         return fig, ax
 
     def plotFilters(self):
-        fig, ax = plt.subplots(1,1, figsize=(8,5))
+        fig, ax = plt.subplots(1,1, figsize=(18,2.5))
         self.n_obs = len(self.obs['filters'])
         obscolors = cm.jet(np.linspace(0,1,self.n_obs))
         ymin, ymax = 0, 1
@@ -845,24 +848,35 @@ class postProspect(object):
         else:
             label=''
 
-        nu = self.wphot*self.wavelength_unitconv
-        if plotnuFnu == True:
-            flux_nu_factor = nu**-1
-        else:
-            flux_nu_factor = 1.
+        wave = self.wphot * self.wavelength_unitconv # micrometers
+        self.nu = (const.c / (wave * u.micrometer)).to(u.Hz).value
+        wave_spec = self.wspec*self.wavelength_unitconv
+        self.nu_spec = (const.c / (wave_spec * u.micrometer)).to(u.Hz).value
 
-        ax.errorbar(nu, flux_nu_factor*self.obs['maggies']*self.flux_unitconv, yerr=self.obs['maggies_unc']*self.flux_unitconv,
+
+        if plotnuFnu == True:
+            self.flux_nu_factor = self.nu
+            self.flux_nu_spec_factor = self.nu_spec
+        else:
+            self.flux_nu_factor = 1.
+            self.flux_nu_spec_factor = 1.
+
+
+        ax.errorbar(self.wphot*self.wavelength_unitconv, self.flux_nu_factor*self.obs['maggies']*self.flux_unitconv,
+                    yerr=self.flux_nu_factor*self.obs['maggies_unc']*self.flux_unitconv,
                     ls='',  c='white',
                     markeredgecolor='black', markerfacecolor='none',
                     zorder=3)
-        ax.scatter(nu, flux_nu_factor*self.obs['maggies']*self.flux_unitconv, c='white',
-                   marker='o', facecolor='none',
+        ax.scatter(self.wphot*self.wavelength_unitconv, self.flux_nu_factor*self.obs['maggies']*self.flux_unitconv,
+                   c='white', marker='o', facecolor='none',
                    zorder=3)
-        ax.errorbar(nu, flux_nu_factor*self.obs['maggies']*self.flux_unitconv, yerr=self.obs['maggies_unc']*self.flux_unitconv,
+        ax.errorbar(self.wphot*self.wavelength_unitconv, self.flux_nu_factor*self.obs['maggies']*self.flux_unitconv,
+                    yerr=self.flux_nu_factor*self.obs['maggies_unc']*self.flux_unitconv,
                     ls='', color=self.obscolors, alpha=.7,
                     markeredgecolor='black', markerfacecolor='none',
                     zorder=3)
-        ax.scatter(nu, flux_nu_factor*self.obs['maggies']*self.flux_unitconv, c=self.obscolors,  alpha=.7,
+        ax.scatter(self.wphot*self.wavelength_unitconv, self.flux_nu_factor*self.obs['maggies']*self.flux_unitconv,
+                   c=self.obscolors,  alpha=.7,
                    marker='o', facecolor='none', label=label,
                    zorder=3)
 
@@ -876,8 +890,8 @@ class postProspect(object):
             label=''
 
         asymmetric_error = np.array([self.mphot_siglo_err, self.mphot_sighi_err])
-        ax.errorbar(nu, flux_nu_factor*self.mphot_med*self.flux_unitconv,
-                    yerr=asymmetric_error*self.flux_unitconv,
+        ax.errorbar(self.wphot*self.wavelength_unitconv, self.flux_nu_factor*self.mphot_med*self.flux_unitconv,
+                    yerr=self.flux_nu_factor*asymmetric_error*self.flux_unitconv,
                     c='slategrey', ecolor='slategrey', fmt='s', alpha=.7, label=label)
 
         if figax == None:
@@ -885,8 +899,11 @@ class postProspect(object):
         else:
             label=''
 
-        ax.plot(self.wspec*self.wavelength_unitconv, self.med*self.flux_unitconv, lw=0.7, c=c2, zorder=1)
-        ax.fill_between(self.wspec*self.wavelength_unitconv, self.siglo*self.flux_unitconv, self.sighi*self.flux_unitconv,
+        ax.plot(self.wspec*self.wavelength_unitconv, self.flux_nu_spec_factor*self.med*self.flux_unitconv,
+                lw=0.7, c=c2, zorder=1)
+        ax.fill_between(self.wspec*self.wavelength_unitconv,
+                        self.flux_nu_spec_factor*self.siglo*self.flux_unitconv,
+                        self.flux_nu_spec_factor*self.sighi*self.flux_unitconv,
                         label=label, lw=0.7, color=c1, alpha=.5, zorder=-1)
 
         ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
@@ -943,14 +960,21 @@ class postProspect(object):
 
         # ax3.axhline(y=0, color='k', linestyle='--')
 
-        diff_obs_mod = self.obs['maggies']*self.flux_unitconv - self.mphot_med*self.flux_unitconv
-        yerr_obs = self.obs['maggies_unc']*self.flux_unitconv
-        yerr_mod = np.abs(self.mphot_siglo - self.mphot_sighi)
-        diff_obs_mod_err = np.sqrt(yerr_obs**2 + yerr_mod**2)
+        self.diff_obs_mod = self.flux_nu_factor * (self.obs['maggies'] - self.mphot_med)  * self.flux_unitconv
+        self.yerr_obs = self.flux_nu_factor * self.obs['maggies_unc'] * self.flux_unitconv
+        self.yerr_mod = self.flux_nu_factor * np.abs(self.mphot_siglo - self.mphot_sighi) * self.flux_unitconv
+        self.diff_obs_mod_err = np.sqrt(self.yerr_obs**2 + self.yerr_mod**2)
 
-        ax3.plot(nu, flux_nu_factor*diff_obs_mod,
+        # https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.stats.chisquare.html
+
+        ax3.plot(self.wphot*self.wavelength_unitconv, self.diff_obs_mod,
                  marker='o', alpha=0, linewidth=0)
-        ax3.scatter(nu, flux_nu_factor*diff_obs_mod,
+        ax3.errorbar(self.wphot*self.wavelength_unitconv, self.diff_obs_mod,
+                     yerr=self.diff_obs_mod_err,
+                     ls='', color=self.obscolors, alpha=.7,
+                     markeredgecolor='black', markerfacecolor='none',
+                     zorder=3)
+        ax3.scatter(self.wphot*self.wavelength_unitconv, self.diff_obs_mod,
                     c=self.obscolors, alpha=.7, marker='o', facecolor='none',
                     zorder=3)
 
