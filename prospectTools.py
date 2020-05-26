@@ -1,6 +1,7 @@
 import prospect.io.read_results as pread
 import prospect.io.read_results as rr
 import numpy as np
+import pandas as pd
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -350,7 +351,7 @@ class postProspect(object):
 
         return fig, ax
 
-    def plotFilters(self):
+    def plotFilters(self, saveplots=True):
         fig, ax = plt.subplots(1,1, figsize=(18,2.5))
         self.n_obs = len(self.obs['filters'])
         obscolors = cm.jet(np.linspace(0,1,self.n_obs))
@@ -371,6 +372,9 @@ class postProspect(object):
 
 
         self.xmin_filters, self.xmax_filters = ax.get_xlim()
+
+        if saveplots:
+            plt.savefig(os.path.join(self.plots_dir,self.objstr+"_filters.pdf"))
 
         return fig, ax
 
@@ -461,7 +465,7 @@ class postProspect(object):
         ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
 
         if figax == None:
-            dy_filterspace = 10**-1.2*ymax-ymin
+            dy_filterspace = 10**-1.2*ymax-ymin # Changed this
             ax.set_ylim(ymin-dy_filterspace, ymax)
         else:
             ax.set_ylim(ymin, ymax)
@@ -574,9 +578,12 @@ class postProspect(object):
                         plot_SFR=True, plotFilterNames=True,
                         fs = 21, fs2 = 17, fs3 = 12, fs_ticks = 12, figsize=(10,7),
                         colors = ['#DAA51B', '#38A6A5', '#2F8AC4', '#5F4690'],
-                        ax_space = (0, .1, 1, 1),
-                        ax2_space = (.7, .25, .35, .35),
-                        ax3_space = (0, 0, 1, .1),
+#                         ax_space = (0, .1, 1, 1),
+#                         ax2_space = (.7, .25, .35, .35),
+#                         ax3_space = (0, 0, 1, .1),
+                        ax_space = (.1, .2, .8, .7),
+                        ax2_space = (.67, .57, .3, .3),
+                        ax3_space = (.1, .1, .8, .1),
                         time_units=1e-9, c1='lightgrey', c2='darkgrey'):
 
         self.wphot = self.obs['wave_effective'].copy()
@@ -666,7 +673,7 @@ class postProspect(object):
 
         ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
 
-        dy_filterspace = 10**-1.2*ymax-ymin
+        dy_filterspace = 10**-1.2*ymax-ymin # Changed this
         ax.set_ylim(ymin-dy_filterspace, ymax)
 
         # Plotting filter curves on twin axis
@@ -796,9 +803,12 @@ class postProspect(object):
                               plot_SFR=True, plotFilterNames=True,
                               fs = 21, fs2 = 17, fs3 = 12, fs_ticks = 12, figsize=(10,7),
                               colors = ['#DAA51B', '#38A6A5', '#2F8AC4', '#5F4690'],
-                              ax_space = (0, .1, 1, 1),
-                              ax2_space = (.7, .25, .35, .35),
-                              ax3_space = (0, 0, 1, .1),
+                              # ax_space = (0, .1, 1, 1),
+                              # ax2_space = (.7, .25, .35, .35),
+                              # ax3_space = (0, 0, 1, .1),
+                              ax_space = (.1, .2, .8, .7),
+                              ax2_space = (.67, .57, .3, .3),
+                              ax3_space = (.1, .1, .8, .1),
                               time_units=1e-9, c1='lightgrey', c2='darkgrey'):
 
         self.wphot = self.obs['wave_effective'].copy()
@@ -908,7 +918,7 @@ class postProspect(object):
 
         ax.set_xlim(self.xmin_filters*self.wavelength_unitconv, self.xmax_filters*self.wavelength_unitconv)
 
-        dy_filterspace = 10**-1.2*ymax-ymin
+        dy_filterspace = 10**-1.2*ymax-ymin # Changed this
         ax.set_ylim(ymin-dy_filterspace, ymax)
 
         # Plotting filter curves on twin axis
