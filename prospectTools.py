@@ -293,7 +293,7 @@ class postProspect(object):
             '1sig_hi[erg/s/cm2/Hz]': self.sighi*self.flux_unitconv,
             'median[erg/s/cm2/Hz]': self.med*self.flux_unitconv,
         })
-        ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_lowmedhi.txt'))
+        ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_mspec_lowmedhi.txt'))
 
     def save1SigmaPhotFile(self, ):
 
