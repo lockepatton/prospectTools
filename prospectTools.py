@@ -185,6 +185,15 @@ class postProspect(object):
         i = np.unravel_index(imax, self.res['lnprobability'].shape)
         self.theta_max = self.res['chain'][i, :].copy()[0]
 
+    def save1SigmaBasicsFile(self, ):
+
+        ToSave = pd.DataFrame({
+            'percentile': self.p_all,
+            'stellarmass': self.stellarmass,
+            'metallicity': self.metallicity,
+            'localSFR': [self.LocalSFRlo, self.LocalSFRmed, self.LocalSFRhi],
+        })
+        ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_basics_lowmedhi.txt'))
 
     def plotTrace(self, saveplots=False):
 
