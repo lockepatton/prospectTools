@@ -311,20 +311,31 @@ class postProspect(object):
         ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_mphot_lowmedhi.txt'))
 
     def save1SigmaSFRFile(self, ):
-        pass
-        #
-        # self.wphot = self.obs['wave_effective'].copy()
-        #
-        # ToSave = pd.DataFrame({
-        #     'wavelength[A]': self.wphot,
-        #     '1sig_low[maggies]': self.mphot_siglo,
-        #     '1sig_hi[maggies]': self.mphot_sighi,
-        #     'median[maggies]': self.mphot_med,
-        #     '1sig_low[erg/s/cm2/Hz]': self.mphot_siglo*self.flux_unitconv,
-        #     '1sig_hi[erg/s/cm2/Hz]': self.mphot_sighi*self.flux_unitconv,
-        #     'median[erg/s/cm2/Hz]': self.mphot_med*self.flux_unitconv,
-        # })
-        # ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_mphot_lowmedhi.txt'))
+
+        self.SFR_all = {}
+        self.SFR_all['time[Gyr]'] = []
+        self.SFR_all['agebins_0'] = self.agebins[:,0]
+        self.SFR_all['agebins_1'] = self.agebins[:,1]
+        self.SFR_all['M_lo[Mdot]'] = []
+        self.SFR_all['M_med[Mdot]'] = []
+        self.SFR_all['M_hi[Mdot]'] = []
+        self.SFR_all['SFR_lo[Mdot/yr]'] = []
+        self.SFR_all['SFR_med[Mdot/yr]'] = []
+        self.SFR_all['SFR_hi[Mdot/yr]'] = []
+
+        for timestart, timeend, mass in zip(self.agebins[:,0],self.agebins[:,1],self.percentMasses):
+            dt_ = 10**timeend - 10**timestart
+
+            self.SFR_all['time[Gyr]'].append(dt_)
+            self.SFR_all['M_lo[Mdot]'].append(mass[0])
+            self.SFR_all['M_med[Mdot]'].append(mass[1])
+            self.SFR_all['M_hi[Mdot]'].append(mass[2])
+            self.SFR_all['SFR_lo[Mdot/yr]'].append(mass[0]/dt_)
+            self.SFR_all['SFR_med[Mdot/yr]'].append(mass[1]/dt_)
+            self.SFR_all['SFR_hi[Mdot/yr]'].append(mass[2]/dt_)
+
+        ToSave = pd.DataFrame(self.SFR_all)
+        ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_SFR_lowmedhi.txt'))
 
     def plotSFR(self, figax=None, saveplots=True, plotRecent=True,
                 fs = 21, fs2 = 17, fs3 = 12,
