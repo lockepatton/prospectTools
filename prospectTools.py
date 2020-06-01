@@ -295,6 +295,37 @@ class postProspect(object):
         })
         ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_lowmedhi.txt'))
 
+    def save1SigmaPhotFile(self, ):
+
+        self.wphot = self.obs['wave_effective'].copy()
+
+        ToSave = pd.DataFrame({
+            'wavelength[A]': self.wphot,
+            '1sig_low[maggies]': self.mphot_siglo,
+            '1sig_hi[maggies]': self.mphot_sighi,
+            'median[maggies]': self.mphot_med,
+            '1sig_low[erg/s/cm2/Hz]': self.mphot_siglo*self.flux_unitconv,
+            '1sig_hi[erg/s/cm2/Hz]': self.mphot_sighi*self.flux_unitconv,
+            'median[erg/s/cm2/Hz]': self.mphot_med*self.flux_unitconv,
+        })
+        ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_mphot_lowmedhi.txt'))
+
+    def save1SigmaSFRFile(self, ):
+        pass
+        #
+        # self.wphot = self.obs['wave_effective'].copy()
+        #
+        # ToSave = pd.DataFrame({
+        #     'wavelength[A]': self.wphot,
+        #     '1sig_low[maggies]': self.mphot_siglo,
+        #     '1sig_hi[maggies]': self.mphot_sighi,
+        #     'median[maggies]': self.mphot_med,
+        #     '1sig_low[erg/s/cm2/Hz]': self.mphot_siglo*self.flux_unitconv,
+        #     '1sig_hi[erg/s/cm2/Hz]': self.mphot_sighi*self.flux_unitconv,
+        #     'median[erg/s/cm2/Hz]': self.mphot_med*self.flux_unitconv,
+        # })
+        # ToSave.to_csv(os.path.join(self.out_dir, self.objstr+'_mphot_lowmedhi.txt'))
+
     def plotSFR(self, figax=None, saveplots=True, plotRecent=True,
                 fs = 21, fs2 = 17, fs3 = 12,
                 c1 = 'lightgrey', c2 = 'darkgrey',
